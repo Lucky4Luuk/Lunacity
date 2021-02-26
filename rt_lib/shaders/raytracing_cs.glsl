@@ -2,6 +2,15 @@
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 layout(rgba32f, binding = 0) uniform image2D img_output;
 
+struct RawRay {
+    vec4 pos;
+    vec4 dir;
+};
+
+layout(std430, binding = 1) buffer ray_buffer {
+    RawRay ray_ssbo[];
+};
+
 #include "settings.glsl"
 #include "raytracing/distance_fields.glsl"
 
@@ -13,25 +22,15 @@ struct Ray {
     vec3 dir;
 };
 
-Ray rayFromProjview(vec2 uv) {
-    vec2 pos = uv * 2.0 - 1.0;
-    float near = 0.02;
-    float far = 1024.0;
-    vec3 origin = (invprojview * vec4(pos, -1.0, 1.0) * near).xyz;
-    vec3 dir = (invprojview * vec4(pos * (far - near), far + near, far - near)).xyz;
-    Ray ray;
-    ray.pos = origin;
-    ray.dir = normalize(dir);
-    return ray;
-}
-
 struct RayHit {
     vec3 pos;
     float dist;
 };
 
 float map(vec3 pos) {
-    return sdSphere(pos, 2.0); //Sphere at origin
+    float d = sdSphere(pos, 2.0); //Sphere at origin
+    // return min(d, sdInfHorizPlane(pos - vec3(0.0, -2.0, 0.0)) );
+    return d;
 }
 
 RayHit trace(Ray ray) {
@@ -62,16 +61,15 @@ vec3 calcNormal(vec3 p) {
 }
 
 void main() {
-    vec3 pixel_coords = vec3(gl_GlobalInvocationID.xyz);
-    vec2 uv = pixel_coords.xy / dims;
-
-    Ray ray = rayFromProjview(uv);
+    uint ray_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * uint(dims.x);
+    RawRay rray = ray_ssbo[ray_index];
+    Ray ray;
+    ray.pos = rray.pos.xyz;
+    ray.dir = rray.dir.xyz;
     RayHit hit = trace(ray);
 
     vec3 normal = calcNormal(hit.pos);
 
     // imageStore(img_output, ivec2(gl_GlobalInvocationID.xy), vec4(vec3(hit.dist / 255.0), 1.0));
     imageStore(img_output, ivec2(gl_GlobalInvocationID.xy), vec4(normal, 1.0));
-
-    // imageStore(img_output, ivec2(gl_GlobalInvocationID.xy), vec4(uv, 0.0, 1.0));
 }

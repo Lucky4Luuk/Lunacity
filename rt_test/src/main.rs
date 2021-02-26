@@ -7,7 +7,12 @@ use glux::{
     mesh::{Vertex, Mesh},
 };
 
-use rt_lib::Raytracer;
+use rt_lib::{
+    Raytracer,
+    objects::{
+        Camera,
+    }
+};
 
 fn main() {
     pretty_env_logger::formatted_builder().filter_level(log::LevelFilter::max()).init();
@@ -23,7 +28,8 @@ fn main() {
 
     let mut program = Program::new(win_settings);
 
-    let raytracer = Raytracer::new((1280, 720));
+    let raytracer = Raytracer::new();
+    let camera = Camera::new((1280, 720));
 
     let vertices: Vec<Vertex> = vec![
             Vertex {
@@ -60,7 +66,7 @@ fn main() {
         ];
     let quad = Mesh::from_vertices(&vertices);
 
-    raytracer.render();
+    raytracer.render(&camera);
 
     let mut last_frame = Instant::now();
     let mut total_time: f32 = 0.0;
@@ -79,7 +85,7 @@ fn main() {
         }
 
         // raytracer.render();
-        raytracer.test_output(&quad);
+        raytracer.test_output(&camera, &quad);
 
         let now = Instant::now();
         let delta = now - last_frame;
