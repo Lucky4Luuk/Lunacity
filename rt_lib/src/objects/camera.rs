@@ -66,7 +66,7 @@ impl Camera {
             for y in 0..self.resolution.1 {
                 let uv = vec2(x as f32 / self.resolution.0 as f32, y as f32 / self.resolution.1 as f32);
                 let ray = ray_from_projview(uv, inv_proj_view);
-                let data_index = x + y * 1280;
+                let data_index = x + y * self.resolution.0;
                 data[data_index] = ray;
             }
         }
