@@ -4,8 +4,7 @@ layout(rgba32f, binding = 0) uniform image2D img_output;
 
 struct RawRayHit {
     vec4 pos;
-    vec4 normal;
-    float dist;
+    vec4 normal_dist;
 };
 
 layout(std430, binding = 1) buffer rayhit_input {
@@ -21,5 +20,5 @@ void main() {
     // imageStore(img_output, ivec2(gl_GlobalInvocationID.xy), vec4(1.0,vec2(0.0),1.0));
     // float grad = float(ray_index) / (1280.0*720.0);
     // imageStore(img_output, ivec2(gl_GlobalInvocationID.xy), vec4(grad,vec2(0.0),1.0));
-    imageStore(img_output, ivec2(gl_GlobalInvocationID.xy), vec4(rhit.normal.xyz, 1.0));
+    imageStore(img_output, ivec2(gl_GlobalInvocationID.xy), vec4(rhit.normal_dist.xyz, 1.0));
 }

@@ -6,8 +6,7 @@ layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 //TODO: Better packing
 struct RawRayHit {
     vec4 pos;
-    vec4 normal;
-    float dist;
+    vec4 normal_dist;
 };
 
 layout(std430, binding = 0) buffer rayhit_output {
@@ -85,10 +84,10 @@ void main() {
     RayHit hit = trace(ray);
     RawRayHit rhit;
     rhit.pos = vec4(hit.pos, 0.0);
-    rhit.normal = vec4(hit.normal, 0.0);
-    rhit.dist = hit.dist;
+    rhit.normal_dist = vec4(hit.normal, hit.dist);
+    // rhit.dist = hit.dist;
 
-    rhit.normal = vec4(1.0, 0.0, 0.0, 1.0);
+    rhit.normal_dist = vec4(1.0, 0.0, 0.0, 1.0);
     // float grad = float(ray_index) / (1280.0*720.0);
     // rhit.normal = vec4(grad, 1.0-grad, 0.0, 0.0);
     ray_hit[ray_index] = rhit;

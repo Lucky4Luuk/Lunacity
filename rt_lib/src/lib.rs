@@ -23,16 +23,14 @@ const COMBINE_CS_PATH:    &str = "rt_lib/shaders/display_cs.glsl";
 #[repr(C, packed)]
 struct RawRayHit {
     pos: glux::gl_types::f32_f32_f32_f32,
-    normal: glux::gl_types::f32_f32_f32_f32,
-    dist: f32,
+    normal_dist: glux::gl_types::f32_f32_f32_f32,
 }
 
 impl RawRayHit {
     pub fn empty() -> Self {
         Self {
             pos: glux::gl_types::f32_f32_f32_f32::new(0.0, 0.0, 0.0, 0.0),
-            normal: glux::gl_types::f32_f32_f32_f32::new(0.0, 0.0, 0.0, 0.0),
-            dist: 0.0,
+            normal_dist: glux::gl_types::f32_f32_f32_f32::new(0.0, 0.0, 0.0, 0.0),
         }
     }
 }
