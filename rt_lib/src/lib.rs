@@ -17,8 +17,9 @@ const PASSTHROUGH_VS_SRC: &str = include_str!("../shaders/passthrough_vs.glsl");
 const PASSTHROUGH_FS_SRC: &str = include_str!("../shaders/passthrough_fs.glsl");
 
 const RAYTRACING_CS_PATH: &str = "rt_lib/shaders/raytracing_cs.glsl";
-const COMBINE_CS_PATH:    &str = "rt_lib/shaders/combine_cs.glsl";
+// const COMBINE_CS_PATH:    &str = "rt_lib/shaders/combine_cs.glsl";
 const SHADING_CS_PATH:    &str = "rt_lib/shaders/shading_cs.glsl";
+const WAVE_CS_PATH:       &str = "rt_lib/shaders/spawn_wave_cs.glsl";
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
@@ -39,6 +40,7 @@ impl RawRayHit {
 pub struct Raytracer {
     raytrace_program: ShaderProgram,
     shading_program: ShaderProgram,
+    wave_program: ShaderProgram,
     // combine_program: ShaderProgram,
     output_program: ShaderProgram,
 
@@ -62,6 +64,11 @@ impl Raytracer {
         let shading_program = ShaderProgram::from_shader(&shading_cs);
         trace!("Shading shader loaded!");
 
+        let wave_cs_src = shader_processor::preprocessor(std::path::Path::new(WAVE_CS_PATH));
+        let wave_cs = Shader::from_source(&wave_cs_src, gl::COMPUTE_SHADER).expect("Failed to compile shader!");
+        let wave_program = ShaderProgram::from_shader(&wave_cs);
+        trace!("Wave spawn shader loaded!");
+
         // let combine_cs_src = shader_processor::preprocessor(std::path::Path::new(COMBINE_CS_PATH));
         // let combine_cs = Shader::from_source(&combine_cs_src, gl::COMPUTE_SHADER).expect("Failed to compile shader!");
         // let combine_program = ShaderProgram::from_shader(&combine_cs);
@@ -72,6 +79,7 @@ impl Raytracer {
         Self {
             raytrace_program: raytracing_program,
             shading_program: shading_program,
+            wave_program: wave_program,
             // combine_program: combine_program,
             output_program: output_program,
 

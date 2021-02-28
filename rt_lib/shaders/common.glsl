@@ -1,3 +1,5 @@
+#define PI 3.14159265359
+
 //Raw rayhit for sending through buffers. Vec4's are used instead of vec3's, because of alignment issues
 //TODO: Better packing
 struct RawRayHit {
