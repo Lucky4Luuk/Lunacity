@@ -1,22 +1,10 @@
 #version 450
-layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
-// layout(rgba32f, binding = 0) uniform image2D img_output;
+#include "common.glsl"
 
-//Raw rayhit for sending through buffers. Vec4's are used instead of vec3's, because of alignment issues
-//TODO: Better packing
-struct RawRayHit {
-    vec4 pos;
-    vec4 normal_dist;
-};
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 layout(std430, binding = 0) buffer rayhit_output {
     RawRayHit ray_hit[];
-};
-
-//Raw ray for sending through buffers. Vec4's are used instead of vec3's, because of alignment issues
-struct RawRay {
-    vec4 pos;
-    vec4 dir;
 };
 
 layout(std430, binding = 1) buffer ray_buffer {
@@ -28,17 +16,6 @@ layout(std430, binding = 1) buffer ray_buffer {
 
 uniform vec2 dims;
 uniform mat4 invprojview;
-
-struct Ray {
-    vec3 pos;
-    vec3 dir;
-};
-
-struct RayHit {
-    vec3 pos;
-    vec3 normal; //Surface normal
-    float dist;
-};
 
 float map(vec3 pos) {
     float d = sdSphere(pos, 2.0); //Sphere at origin
@@ -60,6 +37,7 @@ vec3 calcNormal(vec3 p) {
 RayHit trace(Ray ray) {
     RayHit hit;
     hit.pos = ray.pos;
+    hit.normal = vec3(0.0);
     hit.dist = 0.0;
 
     for (int i = 0; i < MAX_STEPS; i++) {
@@ -85,13 +63,6 @@ void main() {
     RawRayHit rhit;
     rhit.pos = vec4(hit.pos, 0.0);
     rhit.normal_dist = vec4(hit.normal, hit.dist);
-    // rhit.dist = hit.dist;
 
-    rhit.normal_dist = vec4(1.0, 0.0, 0.0, 1.0);
-    // float grad = float(ray_index) / (1280.0*720.0);
-    // rhit.normal = vec4(grad, 1.0-grad, 0.0, 0.0);
     ray_hit[ray_index] = rhit;
-
-    // imageStore(img_output, ivec2(gl_GlobalInvocationID.xy), vec4(vec3(hit.dist / 255.0), 1.0));
-    // imageStore(img_output, ivec2(gl_GlobalInvocationID.xy), vec4(normal, 1.0));
 }

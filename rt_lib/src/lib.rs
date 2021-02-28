@@ -17,7 +17,8 @@ const PASSTHROUGH_VS_SRC: &str = include_str!("../shaders/passthrough_vs.glsl");
 const PASSTHROUGH_FS_SRC: &str = include_str!("../shaders/passthrough_fs.glsl");
 
 const RAYTRACING_CS_PATH: &str = "rt_lib/shaders/raytracing_cs.glsl";
-const COMBINE_CS_PATH:    &str = "rt_lib/shaders/display_cs.glsl";
+const COMBINE_CS_PATH:    &str = "rt_lib/shaders/combine_cs.glsl";
+const SHADING_CS_PATH:    &str = "rt_lib/shaders/shading_cs.glsl";
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
@@ -37,7 +38,8 @@ impl RawRayHit {
 
 pub struct Raytracer {
     raytrace_program: ShaderProgram,
-    combine_program: ShaderProgram,
+    shading_program: ShaderProgram,
+    // combine_program: ShaderProgram,
     output_program: ShaderProgram,
 
     dispatch_size: u32,
@@ -55,17 +57,23 @@ impl Raytracer {
         let raytracing_program = ShaderProgram::from_shader(&raytracing_cs);
         trace!("Raytracing shader loaded!");
 
-        let combine_cs_src = shader_processor::preprocessor(std::path::Path::new(COMBINE_CS_PATH));
-        let combine_cs = Shader::from_source(&combine_cs_src, gl::COMPUTE_SHADER).expect("Failed to compile shader!");
-        let combine_program = ShaderProgram::from_shader(&combine_cs);
-        trace!("Combine shader loaded!");
+        let shading_cs_src = shader_processor::preprocessor(std::path::Path::new(SHADING_CS_PATH));
+        let shading_cs = Shader::from_source(&shading_cs_src, gl::COMPUTE_SHADER).expect("Failed to compile shader!");
+        let shading_program = ShaderProgram::from_shader(&shading_cs);
+        trace!("Shading shader loaded!");
+
+        // let combine_cs_src = shader_processor::preprocessor(std::path::Path::new(COMBINE_CS_PATH));
+        // let combine_cs = Shader::from_source(&combine_cs_src, gl::COMPUTE_SHADER).expect("Failed to compile shader!");
+        // let combine_program = ShaderProgram::from_shader(&combine_cs);
+        // trace!("Combine shader loaded!");
 
         trace!("Raytracer loaded!");
 
         Self {
             raytrace_program: raytracing_program,
+            shading_program: shading_program,
+            // combine_program: combine_program,
             output_program: output_program,
-            combine_program: combine_program,
 
             dispatch_size: 32, //TODO: Connect this + workgroup size in shader together
         }
@@ -99,14 +107,14 @@ impl Raytracer {
         }
 
         //Combine hits
-        self.combine_program.bind();
-        self.combine_program.uniform("dims", f32_f32::from( (camera.resolution.0 as f32, camera.resolution.1 as f32) ));
+        self.shading_program.bind();
+        self.shading_program.uniform("dims", f32_f32::from( (camera.resolution.0 as f32, camera.resolution.1 as f32) ));
         hit_ssbo.bind_buffer_base(1);
         unsafe {
             gl::DispatchCompute(camera.resolution.0 as u32 / (self.dispatch_size-1), camera.resolution.1 as u32 / (self.dispatch_size-1), 1);
         }
         hit_ssbo.bind_buffer_base(0);
-        self.combine_program.unbind();
+        self.shading_program.unbind();
     }
 
     pub fn test_output(&self, camera: &Camera, mesh: &Mesh) {
