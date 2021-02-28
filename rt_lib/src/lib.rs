@@ -106,7 +106,7 @@ impl Raytracer {
             gl::MemoryBarrier(gl::SHADER_STORAGE_BARRIER_BIT);
         }
 
-        //Combine hits
+        //Shade hits and output to texture
         self.shading_program.bind();
         self.shading_program.uniform("dims", f32_f32::from( (camera.resolution.0 as f32, camera.resolution.1 as f32) ));
         hit_ssbo.bind_buffer_base(1);

@@ -32,7 +32,7 @@ impl Camera {
     pub fn new(resolution: (usize, usize)) -> Self {
         let texture = Texture::from_ptr((resolution.0 as i32, resolution.1 as i32), std::ptr::null(), gl::RGBA32F as i32, gl::RGBA);
         unsafe {
-            gl::BindImageTexture(0, texture.id, 0, gl::FALSE, 0, gl::WRITE_ONLY, gl::RGBA32F);
+            gl::BindImageTexture(0, texture.id, 0, gl::FALSE, 0, gl::READ_WRITE, gl::RGBA32F);
         }
         trace!("Render texture constructed!");
 
