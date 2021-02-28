@@ -3,10 +3,12 @@
 
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
+//Output
 layout(std430, binding = 0) buffer rayhit_output {
     RawRayHit ray_hit[];
 };
 
+//Input
 layout(std430, binding = 1) buffer ray_buffer {
     RawRay ray_ssbo[];
 };
