@@ -2,7 +2,7 @@
 #define _INCLUDE_SETTINGS_
 
 // SETTINGS
-#define MAX_STEPS 128
+#define MAX_STEPS 512
 #define DIST_PRECISION 0.001
 
 #endif

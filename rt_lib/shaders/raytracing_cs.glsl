@@ -17,12 +17,11 @@ layout(std430, binding = 1) buffer ray_buffer {
 #include "raytracing/distance_fields.glsl"
 
 uniform vec2 dims;
-uniform mat4 invprojview;
 
 float map(vec3 pos) {
     float d = sdSphere(pos, 2.0); //Sphere at origin
-    // return min(d, sdInfHorizPlane(pos - vec3(0.0, -2.0, 0.0)) );
-    return d;
+    return min(d, sdInfHorizPlane(pos - vec3(0.0, -2.0, 0.0)) );
+    // return d;
 }
 
 //For distance fields.

@@ -87,39 +87,51 @@ impl Raytracer {
             output_program: output_program,
 
             dispatch_size: 32, //TODO: Connect this + workgroup size in shader together
-            bounces: 4,
+            bounces: 2,
             samples: Mutex::new(0),
         }
     }
 
     pub fn render_sample(&self, camera: &Camera) {
         use rand::Rng;
-        let inv_proj_view = (camera.get_projection_matrix(1280.0/720.0) * camera.get_view_matrix()).inverse();
+        use std::time::Instant;
+
+        let func_start = Instant::now();
+
         let mut rng = rand::thread_rng();
 
-        let ray_ssbo = glux::gl_types::ShaderStorageBuffer::new();
         let hit_ssbo = glux::gl_types::ShaderStorageBuffer::new();
         hit_ssbo.bind();
         hit_ssbo.data(&vec![RawRayHit::empty(); camera.resolution.0 * camera.resolution.1][..], gl::DYNAMIC_COPY);
         hit_ssbo.unbind();
+
+        trace!("Hit ssbo created!");
+        trace!("Time since start: {:?}", Instant::now() - func_start);
+
         let rng_ssbo = glux::gl_types::ShaderStorageBuffer::new();
         let rng_vec: Vec<f32> = (0..(camera.resolution.0*camera.resolution.1)).map(|_| rng.gen::<f32>()).collect();
         rng_ssbo.bind();
         rng_ssbo.data(&rng_vec[..], gl::DYNAMIC_COPY);
         rng_ssbo.unbind();
 
-        camera.generate_rays(&ray_ssbo);
+        trace!("RNG ssbo created!");
+        trace!("Time since start: {:?}", Instant::now() - func_start);
+
+        camera.generate_rays();
+        camera.clear_sample_texture();
+
+        trace!("Rays generated and sample texture cleared!");
+        trace!("Time since start: {:?}", Instant::now() - func_start);
 
         for _i in 0..self.bounces {
             self.raytrace_program.bind();
             hit_ssbo.bind_buffer_base(0);
-            ray_ssbo.bind_buffer_base(1);
+            camera.ray_ssbo.bind_buffer_base(1);
             self.raytrace_program.uniform("dims", f32_f32::from( (camera.resolution.0 as f32, camera.resolution.1 as f32) ));
-            self.raytrace_program.uniform("invprojview", inv_proj_view);
             unsafe {
                 gl::DispatchCompute(camera.resolution.0 as u32 / (self.dispatch_size-1), camera.resolution.1 as u32 / (self.dispatch_size-1), 1);
             }
-            ray_ssbo.bind_buffer_base(0);
+            camera.ray_ssbo.bind_buffer_base(0);
             self.raytrace_program.unbind();
 
             unsafe {
@@ -142,13 +154,13 @@ impl Raytracer {
             self.wave_program.uniform("dims", f32_f32::from( (camera.resolution.0 as f32, camera.resolution.1 as f32) ));
             hit_ssbo.bind_buffer_base(0);
             rng_ssbo.bind_buffer_base(1);
-            ray_ssbo.bind_buffer_base(2);
+            camera.ray_ssbo.bind_buffer_base(2);
             unsafe {
                 gl::DispatchCompute(camera.resolution.0 as u32 / (self.dispatch_size-1), camera.resolution.1 as u32 / (self.dispatch_size-1), 1);
             }
             hit_ssbo.bind_buffer_base(0);
             rng_ssbo.bind_buffer_base(0);
-            ray_ssbo.bind_buffer_base(0);
+            camera.ray_ssbo.bind_buffer_base(0);
             self.wave_program.unbind();
         }
 
@@ -175,6 +187,7 @@ impl Raytracer {
 
         self.output_program.bind();
         camera.render_buffer.bind();
+        // camera.sample_buffer.bind();
         mesh.draw();
         camera.render_buffer.unbind();
         self.output_program.unbind();

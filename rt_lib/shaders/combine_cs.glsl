@@ -13,7 +13,6 @@ void main() {
 
     float samplesF = float(samples);
     vec3 final = current * ((samplesF-1.0)/samplesF) + new * (1.0 / samplesF);
-    // vec3 final = vec3(samplesF/2.0);
 
     imageStore(img_output, ivec2(gl_GlobalInvocationID.xy), vec4(final, 1.0));
 }

@@ -1,3 +1,7 @@
+use glux::gl_types::f32_f32;
+use glux::shader::ShaderProgram;
+use glux::shader::Shader;
+use glux::gl_types::ShaderStorageBuffer;
 use glam::*;
 
 use glux::gl_types::Texture;
@@ -18,6 +22,8 @@ impl Ray {
     }
 }
 
+const RAY_CS_PATH: &str = "rt_lib/shaders/camera_ray_cs.glsl";
+
 pub struct Camera {
     pub eye: Vec3,
     pub look_at: Vec3,
@@ -27,6 +33,9 @@ pub struct Camera {
     pub resolution: (usize, usize), //Output resolution
     pub sample_buffer: Texture,     //Output buffer for current sample
     pub render_buffer: Texture,     //Output buffer for final result
+
+    pub ray_ssbo: ShaderStorageBuffer,
+    pub ray_program: ShaderProgram,
 }
 
 impl Camera {
@@ -37,7 +46,14 @@ impl Camera {
         let output_texture = Texture::from_ptr((resolution.0 as i32, resolution.1 as i32), std::ptr::null(), gl::RGBA32F as i32, gl::RGBA);
         trace!("Render texture constructed!");
 
-        Self {
+        let ray_ssbo = glux::gl_types::ShaderStorageBuffer::new();
+
+        let ray_cs_src = crate::shader_processor::preprocessor(std::path::Path::new(RAY_CS_PATH));
+        let ray_cs = Shader::from_source(&ray_cs_src, gl::COMPUTE_SHADER).expect("Failed to compile shader!");
+        let ray_program = ShaderProgram::from_shader(&ray_cs);
+        trace!("Combine shader loaded!");
+
+        let camera = Self {
             eye: vec3(0.0,0.0,-5.0),
             look_at: vec3(0.0,0.0,0.0),
 
@@ -46,6 +62,20 @@ impl Camera {
             resolution: resolution,
             sample_buffer: sample_texture,
             render_buffer: output_texture,
+
+            ray_ssbo: ray_ssbo,
+            ray_program: ray_program,
+        };
+
+        camera.generate_rays();
+
+        camera
+    }
+
+    //TODO: Implement this in glux for textures, so we don't have to wrap it here
+    pub fn clear_sample_texture(&self) {
+        unsafe {
+            gl::ClearTexImage(self.sample_buffer.id, 0, gl::RGBA, gl::UNSIGNED_BYTE, std::ptr::null());
         }
     }
 
@@ -70,28 +100,34 @@ impl Camera {
     }
 
     //TODO: Move ray generation to a shader
-    pub fn generate_rays(&self, ssbo: &glux::gl_types::ShaderStorageBuffer) {
+    pub fn generate_rays(&self) {
         let inv_proj_view = (self.get_projection_matrix(self.resolution.0 as f32 / self.resolution.1 as f32) * self.get_view_matrix()).inverse();
 
         let mut data = vec![Ray::default(); self.resolution.0 * self.resolution.1];
+
+        self.ray_ssbo.bind();
+        self.ray_ssbo.data(&data[..], gl::DYNAMIC_COPY);
+        self.ray_ssbo.unbind();
+
         trace!("Empty buffer constructed!");
 
-        for x in 0..self.resolution.0 {
-            for y in 0..self.resolution.1 {
-                let uv = vec2(x as f32 / self.resolution.0 as f32, y as f32 / self.resolution.1 as f32);
-                let ray = ray_from_projview(uv, inv_proj_view);
-                let data_index = x + y * self.resolution.0;
-                data[data_index] = ray;
-            }
+        self.ray_program.bind();
+        self.ray_ssbo.bind_buffer_base(0);
+        self.ray_program.uniform("dims", f32_f32::from( (self.resolution.0 as f32, self.resolution.1 as f32) ));
+        self.ray_program.uniform("invprojview", inv_proj_view);
+        unsafe {
+            //TODO: DONT HARDCODE THESE WORKGROUP SIZES PLEASE
+            gl::DispatchCompute(self.resolution.0 as u32 / 31, self.resolution.1 as u32 / 31, 1);
         }
+        self.ray_program.unbind();
 
         trace!("Rays generated!");
 
-        ssbo.bind();
-        ssbo.data(&data[..], gl::DYNAMIC_COPY);
-        ssbo.unbind();
-
-        trace!("Ray data uploaded!");
+        // self.ray_ssbo.bind();
+        // self.ray_ssbo.data(&data[..], gl::DYNAMIC_COPY);
+        // self.ray_ssbo.unbind();
+        //
+        // trace!("Ray data uploaded!");
     }
 }
 
