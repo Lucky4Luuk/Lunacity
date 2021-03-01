@@ -11,7 +11,8 @@ pub fn preprocessor(src_path: &Path) -> String {
     for line in src.lines() {
         if line.starts_with("#include") {
             let path = src_path_dir.join(&line.replace("#include ", "").replace('"', ""));
-            let include = std::fs::read_to_string(path).expect("Failed to open include file!");
+            // let include = std::fs::read_to_string(path).expect("Failed to open include file!");
+            let include = preprocessor(&path);
             result.push_str(&include);
             result.push('\n');
         } else {

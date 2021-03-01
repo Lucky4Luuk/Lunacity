@@ -2,22 +2,25 @@ use glux::gl_types::f32_f32;
 use glux::shader::ShaderProgram;
 use glux::shader::Shader;
 use glux::gl_types::ShaderStorageBuffer;
-use glam::*;
 
 use glux::gl_types::Texture;
+
+use glam::*;
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
 struct Ray {
-    pos: glux::gl_types::f32_f32_f32_f32,
-    dir: glux::gl_types::f32_f32_f32_f32,
+    pos:   glux::gl_types::f32_f32_f32_f32,
+    dir:   glux::gl_types::f32_f32_f32_f32,
+    pixel: glux::gl_types::f32_f32_f32_f32
 }
 
 impl Ray {
     pub fn default() -> Self {
         Self {
-            pos: glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,-5.0, 0.0),
-            dir: glux::gl_types::f32_f32_f32_f32::new(0.0,0.0, 1.0, 0.0),
+            pos:   glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
+            dir:   glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
+            pixel: glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
         }
     }
 }
@@ -122,26 +125,5 @@ impl Camera {
         self.ray_program.unbind();
 
         trace!("Rays generated!");
-
-        // self.ray_ssbo.bind();
-        // self.ray_ssbo.data(&data[..], gl::DYNAMIC_COPY);
-        // self.ray_ssbo.unbind();
-        //
-        // trace!("Ray data uploaded!");
-    }
-}
-
-fn ray_from_projview(uv: Vec2, inv_proj_view: Mat4) -> Ray {
-    let pos = uv * 2.0 - vec2(1.0,1.0);
-    let near = 0.02;
-    let far = 1024.0;
-    let origin = (inv_proj_view * vec4(pos.x, pos.y, -1.0, 1.0) * near).xyz();
-    let dir = {
-        let tmp = pos * (far-near);
-        (inv_proj_view * vec4(tmp.x, tmp.y, far + near, far - near)).xyz().normalize()
-    };
-    Ray {
-        pos: glux::gl_types::f32_f32_f32_f32::from((origin.x, origin.y, origin.z, 0.0)),
-        dir: glux::gl_types::f32_f32_f32_f32::from((dir.x, dir.y, dir.z, 0.0)),
     }
 }

@@ -19,20 +19,28 @@ void main() {
 
     int objectID = int(rhit.pos_id.w);
 
+    ivec2 pixel_coords = ivec2(rhit.pixel.xy);
+
     //Get the current pixel. This will be (0,0,0) for the first raywave, and the total of all previous raywaves otherwise.
-    vec3 current = imageLoad(img_output, ivec2(gl_GlobalInvocationID.xy)).rgb;
+    vec3 current = imageLoad(img_output, pixel_coords).rgb;
     vec3 final = vec3(0.0);
 
-    if (objectID > 0) {
-        Material mat;
-        mat.albedo = vec3(0.8, 0.78, 0.75);
+    //TODO: Keep track of colour mask so that bounced light is correct
 
-        vec3 light = normalize(vec3(-1.0, -1.0, 1.0));
-        vec3 view = vec3(0.0);
-        vec3 normal = rhit.normal_dist.xyz;
-        final = lambert(mat, light, view, normal, vec3(0.0), vec3(0.0));
+    if (objectID == 0) { //Ray hit the sky
+        // final = vec3(1.0); //Skybox colour
+    } else { //Ray hit another object
+        //We don't care about the lighting bouncing off this object
+        //to the current point we are shading, because this is
+        //already handled by the hit on that object.
+        vec3 albedo = vec3(float(objectID) / 2.0, mod(float(objectID) / 8.0, 1.0), 1.0 - float(objectID) / 2.0);
+        // final = albedo;
+        if (objectID == 3) {
+            final = vec3(1.0) * 5.0;
+        }
     }
+
     //Store the current + final, because to combine all the raywaves, we simply need to add the result together.
     //Every ray only spawns 1 new ray, so we can always just add them together.
-    imageStore(img_output, ivec2(gl_GlobalInvocationID.xy), vec4(current + final, 1.0));
+    imageStore(img_output, pixel_coords, vec4(current + final, 1.0));
 }

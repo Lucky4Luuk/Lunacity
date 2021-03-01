@@ -15,7 +15,11 @@ use rt_lib::{
 };
 
 fn main() {
-    pretty_env_logger::formatted_builder().filter_level(log::LevelFilter::max()).init();
+    // let max_level = log::LevelFilter::max();
+    let max_level = log::LevelFilter::Debug;
+    pretty_env_logger::formatted_builder()
+        .filter_level(max_level)
+        .init();
 
     debug!("Hello, world!");
 
@@ -77,9 +81,9 @@ fn main() {
         for event in event_pump.poll_iter() {
             match event {
                 sdl2::event::Event::Quit {..} => break 'program,
-                sdl2::event::Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::A), timestamp, window_id, scancode, keymod, repeat } => {
-                    raytracer.render_sample(&camera);
-                }
+                // sdl2::event::Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::A), timestamp, window_id, scancode, keymod, repeat } => {
+                //     raytracer.render_sample(&camera);
+                // },
                 _ => {},
             }
         }
@@ -88,7 +92,7 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
-        // raytracer.render();
+        raytracer.render_sample(&camera);
         raytracer.test_output(&camera, &quad);
 
         let now = Instant::now();

@@ -18,21 +18,15 @@ layout(std430, binding = 1) buffer ray_buffer {
 
 uniform vec2 dims;
 
-float map(vec3 pos) {
-    float d = sdSphere(pos, 2.0); //Sphere at origin
-    return min(d, sdInfHorizPlane(pos - vec3(0.0, -2.0, 0.0)) );
-    // return d;
-}
-
 //For distance fields.
 //For polygonal meshes, the normal will come from the mesh data.
 vec3 calcNormal(vec3 p) {
     const float h = 0.0001;
     const vec2 k = vec2(1.0, -1.0);
-    return normalize(k.xyy*map(p + k.xyy*h) +
-                     k.yyx*map(p + k.yyx*h) +
-                     k.yxy*map(p + k.yxy*h) +
-                     k.xxx*map(p + k.xxx*h) );
+    return normalize(k.xyy*map(p + k.xyy*h).dist +
+                     k.yyx*map(p + k.yyx*h).dist +
+                     k.yxy*map(p + k.yxy*h).dist +
+                     k.xxx*map(p + k.xxx*h).dist );
 }
 
 RayHit trace(Ray ray) {
@@ -41,13 +35,15 @@ RayHit trace(Ray ray) {
     hit.objectID = 0;
     hit.normal = vec3(0.0);
     hit.dist = 0.0;
+    hit.pixel = ray.pixel; //Passthrough
 
     for (int i = 0; i < MAX_STEPS; i++) {
-        float d = map(ray.pos + ray.dir * hit.dist);
+        MapInfo m = map(ray.pos + ray.dir * hit.dist);
+        float d = m.dist;
         if (d < DIST_PRECISION) { //TODO: Step scaling based on i and multiplier
             hit.pos = ray.pos + ray.dir * hit.dist;
             hit.normal = calcNormal(hit.pos); //TODO: Only for distance fields, see comment on calcNormal function
-            hit.objectID = 1; //TODO: Actual object ID
+            hit.objectID = m.objectID; //TODO: Actual object ID
             break;
         }
         hit.dist += d;
@@ -61,11 +57,13 @@ void main() {
     Ray ray;
     ray.pos = rray.pos.xyz;
     ray.dir = rray.dir.xyz;
+    ray.pixel = rray.pixel.xy;
 
     RayHit hit = trace(ray);
     RawRayHit rhit;
     rhit.pos_id = vec4(hit.pos, float(hit.objectID));
     rhit.normal_dist = vec4(hit.normal, hit.dist);
+    rhit.pixel = vec4(hit.pixel, 0.0, 0.0);
 
     ray_hit[ray_index] = rhit;
 }

@@ -1,5 +1,6 @@
 #[macro_use] extern crate log;
 
+use glux::gl_types::ShaderStorageBuffer;
 use std::sync::Mutex;
 use glux::{
     mesh::Mesh,
@@ -25,15 +26,17 @@ const WAVE_CS_PATH:       &str = "rt_lib/shaders/spawn_wave_cs.glsl";
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
 struct RawRayHit {
-    pos: glux::gl_types::f32_f32_f32_f32,
+    pos:         glux::gl_types::f32_f32_f32_f32,
     normal_dist: glux::gl_types::f32_f32_f32_f32,
+    pixel:       glux::gl_types::f32_f32_f32_f32,
 }
 
 impl RawRayHit {
     pub fn empty() -> Self {
         Self {
-            pos: glux::gl_types::f32_f32_f32_f32::new(0.0, 0.0, 0.0, 0.0),
-            normal_dist: glux::gl_types::f32_f32_f32_f32::new(0.0, 0.0, 0.0, 0.0),
+            pos:         glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
+            normal_dist: glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
+            pixel:       glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
         }
     }
 }
@@ -45,6 +48,9 @@ pub struct Raytracer {
     combine_program: ShaderProgram,
     output_program: ShaderProgram,
 
+    rng_update_offset: Mutex<usize>,
+    rng_ssbo: ShaderStorageBuffer,
+
     dispatch_size: u32,
     bounces: u32,
     samples: Mutex<u32>,
@@ -52,6 +58,8 @@ pub struct Raytracer {
 
 impl Raytracer {
     pub fn new() -> Self {
+        use rand::Rng;
+
         let output_vs = Shader::from_source(PASSTHROUGH_VS_SRC, gl::VERTEX_SHADER).expect("Failed to compile shader!");
         let output_fs = Shader::from_source(PASSTHROUGH_FS_SRC, gl::FRAGMENT_SHADER).expect("Failed to compile shader!");
         let output_program = ShaderProgram::from_shaders(vec![&output_vs, &output_fs]);
@@ -77,6 +85,15 @@ impl Raytracer {
         let combine_program = ShaderProgram::from_shader(&combine_cs);
         trace!("Combine shader loaded!");
 
+        let mut rng = rand::thread_rng();
+
+        let rng_ssbo = glux::gl_types::ShaderStorageBuffer::new();
+        let rng_vec: Vec<f32> = (0..2048).map(|_| rng.gen::<f32>()).collect();
+        rng_ssbo.bind();
+        rng_ssbo.data(&rng_vec[..], gl::DYNAMIC_COPY);
+        rng_ssbo.unbind();
+        trace!("RNG ssbo generated!");
+
         trace!("Raytracer loaded!");
 
         Self {
@@ -86,8 +103,11 @@ impl Raytracer {
             combine_program: combine_program,
             output_program: output_program,
 
+            rng_update_offset: Mutex::new(0),
+            rng_ssbo: rng_ssbo,
+
             dispatch_size: 32, //TODO: Connect this + workgroup size in shader together
-            bounces: 2,
+            bounces: 32,
             samples: Mutex::new(0),
         }
     }
@@ -98,9 +118,7 @@ impl Raytracer {
 
         let func_start = Instant::now();
 
-        let mut rng = rand::thread_rng();
-
-        let hit_ssbo = glux::gl_types::ShaderStorageBuffer::new();
+        let hit_ssbo = ShaderStorageBuffer::new();
         hit_ssbo.bind();
         hit_ssbo.data(&vec![RawRayHit::empty(); camera.resolution.0 * camera.resolution.1][..], gl::DYNAMIC_COPY);
         hit_ssbo.unbind();
@@ -108,13 +126,17 @@ impl Raytracer {
         trace!("Hit ssbo created!");
         trace!("Time since start: {:?}", Instant::now() - func_start);
 
-        let rng_ssbo = glux::gl_types::ShaderStorageBuffer::new();
-        let rng_vec: Vec<f32> = (0..(camera.resolution.0*camera.resolution.1)).map(|_| rng.gen::<f32>()).collect();
-        rng_ssbo.bind();
-        rng_ssbo.data(&rng_vec[..], gl::DYNAMIC_COPY);
-        rng_ssbo.unbind();
+        {
+            let mut offset = self.rng_update_offset.lock().unwrap();
+            let mut rng = rand::thread_rng();
+            let rng_vec: Vec<f32> = (*offset..*offset+32).map(|_| rng.gen::<f32>()).collect();
+            self.rng_ssbo.bind();
+            self.rng_ssbo.sub_data(&rng_vec[..], *offset as isize);
+            self.rng_ssbo.unbind();
+            *offset += 32;
+        }
 
-        trace!("RNG ssbo created!");
+        trace!("RNG ssbo updated!");
         trace!("Time since start: {:?}", Instant::now() - func_start);
 
         camera.generate_rays();
@@ -153,13 +175,13 @@ impl Raytracer {
             self.wave_program.bind();
             self.wave_program.uniform("dims", f32_f32::from( (camera.resolution.0 as f32, camera.resolution.1 as f32) ));
             hit_ssbo.bind_buffer_base(0);
-            rng_ssbo.bind_buffer_base(1);
+            self.rng_ssbo.bind_buffer_base(1);
             camera.ray_ssbo.bind_buffer_base(2);
             unsafe {
                 gl::DispatchCompute(camera.resolution.0 as u32 / (self.dispatch_size-1), camera.resolution.1 as u32 / (self.dispatch_size-1), 1);
             }
             hit_ssbo.bind_buffer_base(0);
-            rng_ssbo.bind_buffer_base(0);
+            self.rng_ssbo.bind_buffer_base(0);
             camera.ray_ssbo.bind_buffer_base(0);
             self.wave_program.unbind();
         }
@@ -168,7 +190,6 @@ impl Raytracer {
         *samples_lock += 1;
 
         let samples: i32 = (*samples_lock) as i32;
-        println!("Samples: {}", samples);
 
         self.combine_program.bind();
         self.combine_program.uniform("samples", samples);

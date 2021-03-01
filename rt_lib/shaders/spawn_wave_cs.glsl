@@ -20,6 +20,28 @@ layout(std430, binding = 2) buffer ray_buffer {
 
 uniform vec2 dims;
 
+int flat_idx = int(dot(vec2(gl_GlobalInvocationID.xy), vec2(1, 4096)));
+void encrypt_tea(inout uvec2 arg) {
+	uvec4 key = uvec4(0xa341316c, 0xc8013ea4, 0xad90777d, 0x7e95761e);
+	uint v0 = arg[0], v1 = arg[1];
+	uint sum = 0u;
+	uint delta = 0x9e3779b9u;
+
+	for(int i = 0; i < 32; i++) {
+		sum += delta;
+		v0 += ((v1 << 4) + key[0]) ^ (v1 + sum) ^ ((v1 >> 5) + key[1]);
+		v1 += ((v0 << 4) + key[2]) ^ (v0 + sum) ^ ((v0 >> 5) + key[3]);
+	}
+	arg[0] = v0;
+	arg[1] = v1;
+}
+
+vec2 get_random(inout uint seed) {
+  	uvec2 arg = uvec2(flat_idx, seed++);
+  	encrypt_tea(arg);
+  	return fract(vec2(arg) / vec2(0xffffffffu));
+}
+
 vec3 sampleHemisphere(vec3 normal, vec2 uv) {
     uv.x = 2.0 * uv.x - 1.0;
     float a = PI * 2.0 * uv.y;
@@ -29,7 +51,7 @@ vec3 sampleHemisphere(vec3 normal, vec2 uv) {
 
 void main() {
     uint ray_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * uint(dims.x);
-    uint random_index = ray_index; uint random_index2 = (ray_index + 1) % uint(dims.x + dims.y * dims.x);
+    uint random_index = ray_index % 2048;
 
     RawRayHit rhit = ray_hit[ray_index];
     int objectID = int(rhit.pos_id.w);
@@ -38,12 +60,13 @@ void main() {
         vec3 position = rhit.pos_id.xyz;
         vec3 normal = rhit.normal_dist.xyz;
 
-        vec2 rng = vec2(random_ssbo[random_index], random_ssbo[random_index2]);
+        vec2 rng = get_random(random_ssbo[random_index]);
         normal = sampleHemisphere(normal, rng);
 
         RawRay ray;
         ray.pos = vec4(position + normal * 0.05, 0.0);
         ray.dir = vec4(normal, 0.0);
+        ray.pixel = rhit.pixel;
         ray_ssbo[ray_index] = ray;
     } else {
         RawRay ray;
@@ -53,6 +76,7 @@ void main() {
         //Very bad for optimization, needs fixing.
         //TODO: Fix this
         ray.dir = vec4(0.0);
+        ray.pixel = vec4(0.0);
         ray_ssbo[ray_index] = ray;
     }
 }

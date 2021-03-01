@@ -33,6 +33,7 @@ void main() {
     RawRay rray;
     rray.pos = vec4(ray.pos, 0.0);
     rray.dir = vec4(ray.dir, 0.0);
+    rray.pixel = vec4(pixel_coords, 0.0, 0.0);
 
     ray_ssbo[ray_index] = rray;
 }
