@@ -3,7 +3,7 @@
 //Raw rayhit for sending through buffers. Vec4's are used instead of vec3's, because of alignment issues
 //TODO: Better packing
 struct RawRayHit {
-    vec4 pos;
+    vec4 pos_id; //w = object id
     vec4 normal_dist;
 };
 
@@ -21,6 +21,7 @@ struct Ray {
 
 struct RayHit {
     vec3 pos;
+    int objectID; //0 = skybox
     vec3 normal; //Surface normal
     float dist;
 };

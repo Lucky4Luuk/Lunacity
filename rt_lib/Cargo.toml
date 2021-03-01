@@ -11,3 +11,4 @@ log = "*"
 glux = { git = "https://github.com/Lucky4Luuk/GLux.git" }
 gl = "0.14.0"
 glam = "*"
+rand = "*"

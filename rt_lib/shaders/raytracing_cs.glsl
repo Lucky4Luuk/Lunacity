@@ -39,6 +39,7 @@ vec3 calcNormal(vec3 p) {
 RayHit trace(Ray ray) {
     RayHit hit;
     hit.pos = ray.pos;
+    hit.objectID = 0;
     hit.normal = vec3(0.0);
     hit.dist = 0.0;
 
@@ -47,6 +48,7 @@ RayHit trace(Ray ray) {
         if (d < DIST_PRECISION) { //TODO: Step scaling based on i and multiplier
             hit.pos = ray.pos + ray.dir * hit.dist;
             hit.normal = calcNormal(hit.pos); //TODO: Only for distance fields, see comment on calcNormal function
+            hit.objectID = 1; //TODO: Actual object ID
             break;
         }
         hit.dist += d;
@@ -63,7 +65,7 @@ void main() {
 
     RayHit hit = trace(ray);
     RawRayHit rhit;
-    rhit.pos = vec4(hit.pos, 0.0);
+    rhit.pos_id = vec4(hit.pos, float(hit.objectID));
     rhit.normal_dist = vec4(hit.normal, hit.dist);
 
     ray_hit[ray_index] = rhit;

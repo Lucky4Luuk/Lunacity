@@ -32,15 +32,27 @@ void main() {
     uint random_index = ray_index; uint random_index2 = (ray_index + 1) % uint(dims.x + dims.y * dims.x);
 
     RawRayHit rhit = ray_hit[ray_index];
+    int objectID = int(rhit.pos_id.w);
 
-    vec3 position = rhit.pos.xyz;
-    vec3 normal = rhit.normal_dist.xyz;
+    if (objectID > 0) {
+        vec3 position = rhit.pos_id.xyz;
+        vec3 normal = rhit.normal_dist.xyz;
 
-    vec2 rng = vec2(random_ssbo[random_index], random_ssbo[random_index2]);
-    normal = sampleHemisphere(normal, rng);
+        vec2 rng = vec2(random_ssbo[random_index], random_ssbo[random_index2]);
+        normal = sampleHemisphere(normal, rng);
 
-    RawRay ray;
-    ray.pos = vec4(position, 0.0);
-    ray.dir = vec4(normal, 0.0);
-    ray_ssbo[ray_index] = ray;
+        RawRay ray;
+        ray.pos = vec4(position + normal * 0.05, 0.0);
+        ray.dir = vec4(normal, 0.0);
+        ray_ssbo[ray_index] = ray;
+    } else {
+        RawRay ray;
+        ray.pos = vec4(0.0);
+        //Setting this to 0.0 essentially eliminates the ray entirely, but
+        //the ray will still attempt to take the maximum amount of steps.
+        //Very bad for optimization, needs fixing.
+        //TODO: Fix this
+        ray.dir = vec4(0.0);
+        ray_ssbo[ray_index] = ray;
+    }
 }

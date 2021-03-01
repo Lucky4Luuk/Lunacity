@@ -66,7 +66,8 @@ fn main() {
         ];
     let quad = Mesh::from_vertices(&vertices);
 
-    raytracer.render(&camera);
+    raytracer.render_sample(&camera);
+    // raytracer.render_sample(&camera);
 
     let mut last_frame = Instant::now();
     let mut total_time: f32 = 0.0;
@@ -76,6 +77,9 @@ fn main() {
         for event in event_pump.poll_iter() {
             match event {
                 sdl2::event::Event::Quit {..} => break 'program,
+                sdl2::event::Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::A), timestamp, window_id, scancode, keymod, repeat } => {
+                    raytracer.render_sample(&camera);
+                }
                 _ => {},
             }
         }

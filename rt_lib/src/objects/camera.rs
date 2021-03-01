@@ -25,15 +25,16 @@ pub struct Camera {
     pub fov: f32, //In degrees
 
     pub resolution: (usize, usize), //Output resolution
-    pub render_buffer: Texture,     //Output buffer
+    pub sample_buffer: Texture,     //Output buffer for current sample
+    pub render_buffer: Texture,     //Output buffer for final result
 }
 
 impl Camera {
     pub fn new(resolution: (usize, usize)) -> Self {
-        let texture = Texture::from_ptr((resolution.0 as i32, resolution.1 as i32), std::ptr::null(), gl::RGBA32F as i32, gl::RGBA);
-        unsafe {
-            gl::BindImageTexture(0, texture.id, 0, gl::FALSE, 0, gl::READ_WRITE, gl::RGBA32F);
-        }
+        let sample_texture = Texture::from_ptr((resolution.0 as i32, resolution.1 as i32), std::ptr::null(), gl::RGBA32F as i32, gl::RGBA);
+        trace!("Sample texture constructed!");
+
+        let output_texture = Texture::from_ptr((resolution.0 as i32, resolution.1 as i32), std::ptr::null(), gl::RGBA32F as i32, gl::RGBA);
         trace!("Render texture constructed!");
 
         Self {
@@ -43,7 +44,20 @@ impl Camera {
             fov: 60.0,
 
             resolution: resolution,
-            render_buffer: texture,
+            sample_buffer: sample_texture,
+            render_buffer: output_texture,
+        }
+    }
+
+    pub fn bind_sample_texture(&self, id: u32) {
+        unsafe {
+            gl::BindImageTexture(id, self.sample_buffer.id, 0, gl::FALSE, 0, gl::READ_WRITE, gl::RGBA32F);
+        }
+    }
+
+    pub fn bind_final_texture(&self, id: u32) {
+        unsafe {
+            gl::BindImageTexture(id, self.render_buffer.id, 0, gl::FALSE, 0, gl::READ_WRITE, gl::RGBA32F);
         }
     }
 
