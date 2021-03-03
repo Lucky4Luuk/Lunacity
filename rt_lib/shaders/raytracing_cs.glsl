@@ -35,7 +35,9 @@ RayHit trace(Ray ray) {
     hit.objectID = 0;
     hit.normal = vec3(0.0);
     hit.dist = 0.0;
-    hit.pixel = ray.pixel; //Passthrough
+    //Passthrough
+    hit.pixel = ray.pixel;
+    hit.power = ray.power;
 
     for (int i = 0; i < MAX_STEPS; i++) {
         MapInfo m = map(ray.pos + ray.dir * hit.dist);
@@ -58,12 +60,15 @@ void main() {
     ray.pos = rray.pos.xyz;
     ray.dir = rray.dir.xyz;
     ray.pixel = rray.pixel.xy;
+    ray.power = rray.dir.w;
 
     RayHit hit = trace(ray);
     RawRayHit rhit;
     rhit.pos_id = vec4(hit.pos, float(hit.objectID));
     rhit.normal_dist = vec4(hit.normal, hit.dist);
     rhit.pixel = vec4(hit.pixel, 0.0, 0.0);
+    rhit.dir_pow = vec4(ray.dir, hit.power);
+    rhit.col_mask = rray.col_mask;
 
     ray_hit[ray_index] = rhit;
 }

@@ -10,17 +10,41 @@ use glam::*;
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
 struct Ray {
-    pos:   glux::gl_types::f32_f32_f32_f32,
-    dir:   glux::gl_types::f32_f32_f32_f32,
-    pixel: glux::gl_types::f32_f32_f32_f32
+    pos:      glux::gl_types::f32_f32_f32_f32,
+    dir:      glux::gl_types::f32_f32_f32_f32,
+    pixel:    glux::gl_types::f32_f32_f32_f32,
+    col_mask: glux::gl_types::f32_f32_f32_f32,
 }
 
 impl Ray {
     pub fn default() -> Self {
         Self {
-            pos:   glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
-            dir:   glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
-            pixel: glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
+            pos:      glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
+            dir:      glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
+            pixel:    glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
+            col_mask: glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+#[repr(C, packed)]
+struct RawRayHit {
+    pos:         glux::gl_types::f32_f32_f32_f32,
+    normal_dist: glux::gl_types::f32_f32_f32_f32,
+    pixel:       glux::gl_types::f32_f32_f32_f32,
+    dir_pow:     glux::gl_types::f32_f32_f32_f32,
+    col_mask:    glux::gl_types::f32_f32_f32_f32,
+}
+
+impl RawRayHit {
+    pub fn empty() -> Self {
+        Self {
+            pos:         glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
+            normal_dist: glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
+            pixel:       glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
+            dir_pow:     glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,1.0),
+            col_mask:    glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,1.0),
         }
     }
 }
@@ -38,6 +62,8 @@ pub struct Camera {
     pub render_buffer: Texture,     //Output buffer for final result
 
     pub ray_ssbo: ShaderStorageBuffer,
+    pub hit_ssbo: ShaderStorageBuffer,
+
     pub ray_program: ShaderProgram,
 }
 
@@ -50,6 +76,11 @@ impl Camera {
         trace!("Render texture constructed!");
 
         let ray_ssbo = glux::gl_types::ShaderStorageBuffer::new();
+
+        let hit_ssbo = ShaderStorageBuffer::new();
+        hit_ssbo.bind();
+        hit_ssbo.data(&vec![RawRayHit::empty(); resolution.0 * resolution.1][..], gl::DYNAMIC_COPY);
+        hit_ssbo.unbind();
 
         let ray_cs_src = crate::shader_processor::preprocessor(std::path::Path::new(RAY_CS_PATH));
         let ray_cs = Shader::from_source(&ray_cs_src, gl::COMPUTE_SHADER).expect("Failed to compile shader!");
@@ -67,6 +98,8 @@ impl Camera {
             render_buffer: output_texture,
 
             ray_ssbo: ray_ssbo,
+            hit_ssbo: hit_ssbo,
+
             ray_program: ray_program,
         };
 
@@ -92,6 +125,17 @@ impl Camera {
         unsafe {
             gl::BindImageTexture(id, self.render_buffer.id, 0, gl::FALSE, 0, gl::READ_WRITE, gl::RGBA32F);
         }
+    }
+
+    pub fn get_texture_as_pixels(&self) -> Vec<u8> {
+        self.render_buffer.bind();
+        let mut pixels = vec![0u8; self.resolution.0 * self.resolution.1 * 4];
+        unsafe {
+            gl::GetTexImage(gl::TEXTURE_2D, 0, gl::RGBA, gl::UNSIGNED_BYTE, pixels.as_mut_ptr() as *mut std::ffi::c_void);
+        }
+        self.render_buffer.unbind();
+
+        return pixels;
     }
 
     pub fn get_projection_matrix(&self, aspect_ratio: f32) -> Mat4 {

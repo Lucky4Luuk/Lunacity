@@ -33,10 +33,9 @@ void main() {
         //We don't care about the lighting bouncing off this object
         //to the current point we are shading, because this is
         //already handled by the hit on that object.
-        vec3 albedo = vec3(float(objectID) / 2.0, mod(float(objectID) / 8.0, 1.0), 1.0 - float(objectID) / 2.0);
-        // final = albedo;
+
         if (objectID == 3) {
-            final = vec3(1.0) * 5.0;
+            final = vec3(1.0) * 5.0 * rhit.dir_pow.w * rhit.col_mask.rgb;
         }
     }
 

@@ -10,7 +10,7 @@ layout(std430, binding = 0) buffer rayhit_input {
 
 //Input 2
 layout(std430, binding = 1) buffer random_input {
-    float random_ssbo[];
+    uint random_ssbo[2048];
 };
 
 //Output
@@ -19,6 +19,7 @@ layout(std430, binding = 2) buffer ray_buffer {
 };
 
 uniform vec2 dims;
+uniform float samples;
 
 int flat_idx = int(dot(vec2(gl_GlobalInvocationID.xy), vec2(1, 4096)));
 void encrypt_tea(inout uvec2 arg) {
@@ -51,7 +52,7 @@ vec3 sampleHemisphere(vec3 normal, vec2 uv) {
 
 void main() {
     uint ray_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * uint(dims.x);
-    uint random_index = ray_index % 2048;
+    uint random_index = (ray_index + uint(samples)) % 2048;
 
     RawRayHit rhit = ray_hit[ray_index];
     int objectID = int(rhit.pos_id.w);
@@ -60,13 +61,27 @@ void main() {
         vec3 position = rhit.pos_id.xyz;
         vec3 normal = rhit.normal_dist.xyz;
 
+        // vec2 rng = vec2(random_ssbo[random_index], random_ssbo[random_index2]);
+        // uint seed = uint(samples);
         vec2 rng = get_random(random_ssbo[random_index]);
-        normal = sampleHemisphere(normal, rng);
+        vec3 newDir = sampleHemisphere(normal, rng);
+
+        float n_dot_l = dot(newDir, rhit.normal_dist.xyz);
+        rhit.dir_pow.w = rhit.dir_pow.w * n_dot_l;
+
+        vec3 albedo = vec3(1.0);
+        if (objectID == 2) {
+            albedo = vec3(1.0, 0.0, 0.0);
+        } else if (objectID == 4) {
+            albedo = vec3(0.0, 1.0, 0.0);
+        }
+        rhit.col_mask.rgb *= albedo;
 
         RawRay ray;
         ray.pos = vec4(position + normal * 0.05, 0.0);
-        ray.dir = vec4(normal, 0.0);
+        ray.dir = vec4(newDir, rhit.dir_pow.w);
         ray.pixel = rhit.pixel;
+        ray.col_mask = rhit.col_mask;
         ray_ssbo[ray_index] = ray;
     } else {
         RawRay ray;

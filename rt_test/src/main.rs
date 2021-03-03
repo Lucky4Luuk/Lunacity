@@ -81,9 +81,12 @@ fn main() {
         for event in event_pump.poll_iter() {
             match event {
                 sdl2::event::Event::Quit {..} => break 'program,
-                // sdl2::event::Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::A), timestamp, window_id, scancode, keymod, repeat } => {
-                //     raytracer.render_sample(&camera);
-                // },
+                sdl2::event::Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::A), timestamp, window_id, scancode, keymod, repeat } => {
+                    let pixels = camera.get_texture_as_pixels();
+                    println!("Pixels: {}", pixels.len());
+                    image::save_buffer(&std::path::Path::new("test.png"), &pixels, 1280, 720, image::ColorType::Rgba8);
+                    println!("Image saved!");
+                },
                 _ => {},
             }
         }
