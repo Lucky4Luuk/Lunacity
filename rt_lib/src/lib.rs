@@ -74,7 +74,7 @@ impl Raytracer {
         let mut rng = rand::thread_rng();
 
         let rng_ssbo = glux::gl_types::ShaderStorageBuffer::new();
-        let rng_vec: Vec<u32> = (0..2048).map(|_| rng.gen_range(0..2048)).collect();
+        let rng_vec: Vec<f32> = (0..1280*720).map(|_| rng.gen_range(0f32..2048f32)).collect();
         rng_ssbo.bind();
         rng_ssbo.data(&rng_vec[..], gl::DYNAMIC_COPY);
         rng_ssbo.unbind();
@@ -112,11 +112,11 @@ impl Raytracer {
         {
             let samples = *self.samples.lock().unwrap();
             if samples % 32 == 0 {
-                let mut rng = rand::thread_rng();
-                let rng_vec: Vec<u32> = (0..2048).map(|_| rng.gen_range(0..2048)).collect();
-                self.rng_ssbo.bind();
-                self.rng_ssbo.data(&rng_vec[..], gl::DYNAMIC_COPY);
-                self.rng_ssbo.unbind();
+                // let mut rng = rand::thread_rng();
+                // let rng_vec: Vec<f32> = (0..128).map(|_| rng.gen_range(1f32..2048f32)).collect();
+                // self.rng_ssbo.bind();
+                // self.rng_ssbo.data(&rng_vec[..], gl::DYNAMIC_COPY);
+                // self.rng_ssbo.unbind();
                 debug!("Refreshed RNG buffer! Samples: {}", samples);
             }
         }

@@ -10,7 +10,7 @@ layout(std430, binding = 0) buffer rayhit_input {
 
 //Input 2
 layout(std430, binding = 1) buffer random_input {
-    uint random_ssbo[2048];
+    float random_ssbo[];
 };
 
 //Output
@@ -21,38 +21,43 @@ layout(std430, binding = 2) buffer ray_buffer {
 uniform vec2 dims;
 uniform float samples;
 
-int flat_idx = int(dot(vec2(gl_GlobalInvocationID.xy), vec2(1, 4096)));
-void encrypt_tea(inout uvec2 arg) {
-	uvec4 key = uvec4(0xa341316c, 0xc8013ea4, 0xad90777d, 0x7e95761e);
-	uint v0 = arg[0], v1 = arg[1];
-	uint sum = 0u;
-	uint delta = 0x9e3779b9u;
-
-	for(int i = 0; i < 32; i++) {
-		sum += delta;
-		v0 += ((v1 << 4) + key[0]) ^ (v1 + sum) ^ ((v1 >> 5) + key[1]);
-		v1 += ((v0 << 4) + key[2]) ^ (v0 + sum) ^ ((v0 >> 5) + key[3]);
-	}
-	arg[0] = v0;
-	arg[1] = v1;
+float fast(vec2 v) {
+    v = (1./4320.) * v + vec2(0.25,0.);
+    float state = fract( dot( v * v, vec2(3571)));
+    return fract( state * state * (3571. * 2.));
 }
 
-vec2 get_random(inout uint seed) {
-  	uvec2 arg = uvec2(flat_idx, seed++);
-  	encrypt_tea(arg);
-  	return fract(vec2(arg) / vec2(0xffffffffu));
+float hash1(inout float seed) {
+    return fract(sin(seed += 0.1)*43758.5453123);
+    // return fast(vec2(seed, seed++));
 }
 
-vec3 sampleHemisphere(vec3 normal, vec2 uv) {
-    uv.x = 2.0 * uv.x - 1.0;
-    float a = PI * 2.0 * uv.y;
-    vec2 b = sqrt(1.0 - uv.x*uv.x) * vec2(cos(a), sin(a));
-    return normalize(normal + vec3(b.x, b.y, uv.x));
+vec2 hash2(inout float seed) {
+    return fract(sin(vec2(seed+=0.1,seed+=0.1))*vec2(43758.5453123,22578.1459123));
+}
+
+vec3 hash3(inout float seed) {
+    return fract(sin(vec3(seed+=0.1,seed+=0.1,seed+=0.1))*vec3(43758.5453123,22578.1459123,19642.3490423));
+}
+
+vec3 sampleHemisphere(const vec3 n, inout float seed ) {
+  	vec2 r = hash2(seed);
+
+	vec3  uu = normalize( cross( n, vec3(0.0,1.0,1.0) ) );
+	vec3  vv = cross( uu, n );
+
+	float ra = sqrt(r.y);
+	float rx = ra*cos(6.2831*r.x);
+	float ry = ra*sin(6.2831*r.x);
+	float rz = sqrt( 1.0-r.y );
+	vec3  rr = vec3( rx*uu + ry*vv + rz*n );
+
+    return normalize( rr );
 }
 
 void main() {
     uint ray_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * uint(dims.x);
-    uint random_index = (ray_index + uint(samples)) % 2048;
+    uint random_index = (ray_index + uint(samples)) % uint(dims.x * dims.y);
 
     RawRayHit rhit = ray_hit[ray_index];
     int objectID = int(rhit.pos_id.w);
@@ -63,8 +68,7 @@ void main() {
 
         // vec2 rng = vec2(random_ssbo[random_index], random_ssbo[random_index2]);
         // uint seed = uint(samples);
-        vec2 rng = get_random(random_ssbo[random_index]);
-        vec3 newDir = sampleHemisphere(normal, rng);
+        vec3 newDir = sampleHemisphere(normal, random_ssbo[random_index]);
 
         float n_dot_l = dot(newDir, rhit.normal_dist.xyz);
         rhit.dir_pow.w = rhit.dir_pow.w * n_dot_l;
