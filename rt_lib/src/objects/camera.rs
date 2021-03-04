@@ -68,7 +68,7 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(resolution: (usize, usize)) -> Self {
+    pub fn new(resolution: (usize, usize), dispatch_size: (u32, u32)) -> Self {
         let sample_texture = Texture::from_ptr((resolution.0 as i32, resolution.1 as i32), std::ptr::null(), gl::RGBA32F as i32, gl::RGBA);
         trace!("Sample texture constructed!");
 
@@ -82,7 +82,7 @@ impl Camera {
         hit_ssbo.data(&vec![RawRayHit::empty(); resolution.0 * resolution.1][..], gl::DYNAMIC_COPY);
         hit_ssbo.unbind();
 
-        let ray_cs_src = crate::shader_processor::preprocessor(std::path::Path::new(RAY_CS_PATH));
+        let ray_cs_src = crate::shader_processor::preprocessor(std::path::Path::new(RAY_CS_PATH), dispatch_size);
         let ray_cs = Shader::from_source(&ray_cs_src, gl::COMPUTE_SHADER).expect("Failed to compile shader!");
         let ray_program = ShaderProgram::from_shader(&ray_cs);
         trace!("Combine shader loaded!");
@@ -103,7 +103,7 @@ impl Camera {
             ray_program: ray_program,
         };
 
-        camera.generate_rays();
+        camera.generate_rays(dispatch_size);
 
         camera
     }
@@ -147,7 +147,7 @@ impl Camera {
     }
 
     //TODO: Move ray generation to a shader
-    pub fn generate_rays(&self) {
+    pub fn generate_rays(&self, dispatch_size: (u32, u32)) {
         let inv_proj_view = (self.get_projection_matrix(self.resolution.0 as f32 / self.resolution.1 as f32) * self.get_view_matrix()).inverse();
 
         let mut data = vec![Ray::default(); self.resolution.0 * self.resolution.1];
@@ -163,8 +163,7 @@ impl Camera {
         self.ray_program.uniform("dims", f32_f32::from( (self.resolution.0 as f32, self.resolution.1 as f32) ));
         self.ray_program.uniform("invprojview", inv_proj_view);
         unsafe {
-            //TODO: DONT HARDCODE THESE WORKGROUP SIZES PLEASE
-            gl::DispatchCompute(self.resolution.0 as u32 / 31, self.resolution.1 as u32 / 31, 1);
+            gl::DispatchCompute(self.resolution.0 as u32 / dispatch_size.0, self.resolution.1 as u32 / dispatch_size.1, 1);
         }
         self.ray_program.unbind();
 

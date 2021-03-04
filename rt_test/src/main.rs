@@ -14,6 +14,14 @@ use rt_lib::{
     }
 };
 
+pub fn get_workgroup_invocations() -> i32 {
+    let mut value = 0;
+    unsafe {
+        gl::GetIntegerv(gl::MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &mut value);
+    }
+    value
+}
+
 fn main() {
     // let max_level = log::LevelFilter::max();
     let max_level = log::LevelFilter::Debug;
@@ -32,8 +40,12 @@ fn main() {
 
     let mut program = Program::new(win_settings);
 
-    let raytracer = Raytracer::new();
-    let camera = Camera::new((1280, 720));
+    // let dispatch_size = (get_workgroup_invocations() as f32).sqrt() as u32;
+    let dispatch_size = (32, 30); //960, should be able to run on everything
+    debug!("Dispatch size: {:?}", dispatch_size);
+
+    let raytracer = Raytracer::new(dispatch_size);
+    let camera = Camera::new((1280, 720), dispatch_size);
 
     let vertices: Vec<Vertex> = vec![
             Vertex {

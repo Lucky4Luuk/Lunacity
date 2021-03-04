@@ -37,13 +37,13 @@ pub struct Raytracer {
 
     rng_ssbo: ShaderStorageBuffer,
 
-    dispatch_size: u32,
+    dispatch_size: (u32, u32),
     bounces: u32,
     samples: Mutex<u32>,
 }
 
 impl Raytracer {
-    pub fn new() -> Self {
+    pub fn new(dispatch_size: (u32, u32)) -> Self {
         use rand::Rng;
 
         let output_vs = Shader::from_source(PASSTHROUGH_VS_SRC, gl::VERTEX_SHADER).expect("Failed to compile shader!");
@@ -51,22 +51,22 @@ impl Raytracer {
         let output_program = ShaderProgram::from_shaders(vec![&output_vs, &output_fs]);
         trace!("Output shader loaded!");
 
-        let raytracing_cs_src = shader_processor::preprocessor(std::path::Path::new(RAYTRACING_CS_PATH));
+        let raytracing_cs_src = shader_processor::preprocessor(std::path::Path::new(RAYTRACING_CS_PATH), dispatch_size);
         let raytracing_cs = Shader::from_source(&raytracing_cs_src, gl::COMPUTE_SHADER).expect("Failed to compile shader!");
         let raytracing_program = ShaderProgram::from_shader(&raytracing_cs);
         trace!("Raytracing shader loaded!");
 
-        let shading_cs_src = shader_processor::preprocessor(std::path::Path::new(SHADING_CS_PATH));
+        let shading_cs_src = shader_processor::preprocessor(std::path::Path::new(SHADING_CS_PATH), dispatch_size);
         let shading_cs = Shader::from_source(&shading_cs_src, gl::COMPUTE_SHADER).expect("Failed to compile shader!");
         let shading_program = ShaderProgram::from_shader(&shading_cs);
         trace!("Shading shader loaded!");
 
-        let wave_cs_src = shader_processor::preprocessor(std::path::Path::new(WAVE_CS_PATH));
+        let wave_cs_src = shader_processor::preprocessor(std::path::Path::new(WAVE_CS_PATH), dispatch_size);
         let wave_cs = Shader::from_source(&wave_cs_src, gl::COMPUTE_SHADER).expect("Failed to compile shader!");
         let wave_program = ShaderProgram::from_shader(&wave_cs);
         trace!("Wave spawn shader loaded!");
 
-        let combine_cs_src = shader_processor::preprocessor(std::path::Path::new(COMBINE_CS_PATH));
+        let combine_cs_src = shader_processor::preprocessor(std::path::Path::new(COMBINE_CS_PATH), dispatch_size);
         let combine_cs = Shader::from_source(&combine_cs_src, gl::COMPUTE_SHADER).expect("Failed to compile shader!");
         let combine_program = ShaderProgram::from_shader(&combine_cs);
         trace!("Combine shader loaded!");
@@ -91,7 +91,7 @@ impl Raytracer {
 
             rng_ssbo: rng_ssbo,
 
-            dispatch_size: 32, //TODO: Connect this + workgroup size in shader together
+            dispatch_size: dispatch_size, //TODO: Connect this + workgroup size in shader together
             bounces: 4,
             samples: Mutex::new(0),
         }
@@ -103,7 +103,7 @@ impl Raytracer {
         // trace!("RNG ssbo updated!");
         // trace!("Time since start: {:?}", Instant::now() - func_start);
 
-        camera.generate_rays();
+        camera.generate_rays(self.dispatch_size);
         camera.clear_sample_texture();
 
         // trace!("Rays generated and sample texture cleared!");
@@ -127,7 +127,7 @@ impl Raytracer {
             camera.ray_ssbo.bind_buffer_base(1);
             self.raytrace_program.uniform("dims", f32_f32::from( (camera.resolution.0 as f32, camera.resolution.1 as f32) ));
             unsafe {
-                gl::DispatchCompute(camera.resolution.0 as u32 / (self.dispatch_size-1), camera.resolution.1 as u32 / (self.dispatch_size-1), 1);
+                gl::DispatchCompute(camera.resolution.0 as u32 / self.dispatch_size.0, camera.resolution.1 as u32 / self.dispatch_size.1, 1);
             }
             camera.ray_ssbo.bind_buffer_base(0);
             self.raytrace_program.unbind();
@@ -144,7 +144,7 @@ impl Raytracer {
             self.rng_ssbo.bind_buffer_base(1);
             camera.ray_ssbo.bind_buffer_base(2);
             unsafe {
-                gl::DispatchCompute(camera.resolution.0 as u32 / (self.dispatch_size-1), camera.resolution.1 as u32 / (self.dispatch_size-1), 1);
+                gl::DispatchCompute(camera.resolution.0 as u32 / self.dispatch_size.0, camera.resolution.1 as u32 / self.dispatch_size.1, 1);
             }
             camera.hit_ssbo.bind_buffer_base(0);
             self.rng_ssbo.bind_buffer_base(0);
@@ -157,7 +157,7 @@ impl Raytracer {
             self.shading_program.uniform("dims", f32_f32::from( (camera.resolution.0 as f32, camera.resolution.1 as f32) ));
             camera.hit_ssbo.bind_buffer_base(1);
             unsafe {
-                gl::DispatchCompute(camera.resolution.0 as u32 / (self.dispatch_size-1), camera.resolution.1 as u32 / (self.dispatch_size-1), 1);
+                gl::DispatchCompute(camera.resolution.0 as u32 / self.dispatch_size.0, camera.resolution.1 as u32 / self.dispatch_size.1, 1);
             }
             camera.hit_ssbo.bind_buffer_base(0);
             self.shading_program.unbind();
@@ -175,7 +175,7 @@ impl Raytracer {
         camera.bind_sample_texture(0);
         camera.bind_final_texture(1);
         unsafe {
-            gl::DispatchCompute(camera.resolution.0 as u32 / (self.dispatch_size-1), camera.resolution.1 as u32 / (self.dispatch_size-1), 1);
+            gl::DispatchCompute(camera.resolution.0 as u32 / self.dispatch_size.0, camera.resolution.1 as u32 / self.dispatch_size.1, 1);
         }
         self.combine_program.unbind();
     }
