@@ -1,6 +1,7 @@
 use std::path::Path;
 
 /// Shader preprocessor. Handles things like `#include`
+//TODO: Handle comments at the end of the `#include` line
 pub fn preprocessor(src_path: &Path, dispatch_size: (u32, u32)) -> String {
     let src_path_dir = src_path.parent().expect("File must be in a directory of some kind. How did you manage this??");
 
@@ -11,7 +12,6 @@ pub fn preprocessor(src_path: &Path, dispatch_size: (u32, u32)) -> String {
     for line in src.lines() {
         if line.starts_with("#include") {
             let path = src_path_dir.join(&line.replace("#include ", "").replace('"', ""));
-            // let include = std::fs::read_to_string(path).expect("Failed to open include file!");
             let include = preprocessor(&path, dispatch_size);
             result.push_str(&include);
             result.push('\n');

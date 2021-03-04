@@ -13,7 +13,7 @@ struct Ray {
     pos:      glux::gl_types::f32_f32_f32_f32,
     dir:      glux::gl_types::f32_f32_f32_f32,
     pixel:    glux::gl_types::f32_f32_f32_f32,
-    col_mask: glux::gl_types::f32_f32_f32_f32,
+    power:    glux::gl_types::f32_f32_f32_f32,
 }
 
 impl Ray {
@@ -22,7 +22,7 @@ impl Ray {
             pos:      glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
             dir:      glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
             pixel:    glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
-            col_mask: glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
+            power:    glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
         }
     }
 }
@@ -34,7 +34,7 @@ struct RawRayHit {
     normal_dist: glux::gl_types::f32_f32_f32_f32,
     pixel:       glux::gl_types::f32_f32_f32_f32,
     dir_pow:     glux::gl_types::f32_f32_f32_f32,
-    col_mask:    glux::gl_types::f32_f32_f32_f32,
+    power:       glux::gl_types::f32_f32_f32_f32,
 }
 
 impl RawRayHit {
@@ -44,7 +44,7 @@ impl RawRayHit {
             normal_dist: glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
             pixel:       glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,0.0),
             dir_pow:     glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,1.0),
-            col_mask:    glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,1.0),
+            power:       glux::gl_types::f32_f32_f32_f32::new(0.0,0.0,0.0,1.0),
         }
     }
 }
@@ -150,13 +150,13 @@ impl Camera {
     pub fn generate_rays(&self, dispatch_size: (u32, u32)) {
         let inv_proj_view = (self.get_projection_matrix(self.resolution.0 as f32 / self.resolution.1 as f32) * self.get_view_matrix()).inverse();
 
-        let mut data = vec![Ray::default(); self.resolution.0 * self.resolution.1];
+        let data = vec![Ray::default(); self.resolution.0 * self.resolution.1];
 
         self.ray_ssbo.bind();
         self.ray_ssbo.data(&data[..], gl::DYNAMIC_COPY);
         self.ray_ssbo.unbind();
 
-        trace!("Empty buffer constructed!");
+        // trace!("Empty buffer constructed!");
 
         self.ray_program.bind();
         self.ray_ssbo.bind_buffer_base(0);
@@ -167,6 +167,6 @@ impl Camera {
         }
         self.ray_program.unbind();
 
-        trace!("Rays generated!");
+        // trace!("Rays generated!");
     }
 }

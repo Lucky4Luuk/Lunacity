@@ -12,6 +12,7 @@ uniform vec2 dims;
 
 #include "brdf/mat.glsl"
 #include "brdf/lambert.glsl"
+#include "brdf/generated.glsl"
 
 void main() {
     uint ray_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * uint(dims.x);
@@ -33,9 +34,8 @@ void main() {
         //We don't care about the lighting bouncing off this object
         //to the current point we are shading, because this is
         //already handled by the hit on that object.
-
         if (objectID == 3) {
-            final = vec3(1.0) * 5.0 * rhit.dir_pow.w * rhit.col_mask.rgb;
+            final = vec3(1.0) * 5.0 * rhit.power.rgb;
         }
     }
 

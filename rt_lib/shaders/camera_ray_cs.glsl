@@ -32,9 +32,9 @@ void main() {
     Ray ray = rayFromProjview(uv);
     RawRay rray;
     rray.pos = vec4(ray.pos, 0.0);
-    rray.dir = vec4(ray.dir, 1.0); //w = power, starts at 1
+    rray.dir = vec4(ray.dir, 0.0);
     rray.pixel = vec4(pixel_coords, 0.0, 0.0);
-    rray.col_mask = vec4(vec3(1.0), 0.0); //color mask starts at 1,1,1
+    rray.power = vec4(vec3(1.0), 0.0); //power starts at 1
 
     ray_ssbo[ray_index] = rray;
 }

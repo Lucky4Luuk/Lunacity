@@ -11,6 +11,7 @@ use rt_lib::{
     Raytracer,
     objects::{
         Camera,
+        Lambert,
     }
 };
 
@@ -44,7 +45,9 @@ fn main() {
     let dispatch_size = (32, 30); //960, should be able to run on everything
     debug!("Dispatch size: {:?}", dispatch_size);
 
-    let raytracer = Raytracer::new(dispatch_size);
+    let mut raytracer = Raytracer::new(dispatch_size);
+    let lambert = Lambert;
+    raytracer.add_brdf(&lambert);
     let camera = Camera::new((1280, 720), dispatch_size);
 
     let vertices: Vec<Vertex> = vec![

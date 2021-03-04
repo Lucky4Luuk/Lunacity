@@ -7,25 +7,24 @@ struct RawRayHit {
     vec4 pos_id; //w = object id
     vec4 normal_dist; //xyz = normal, w = distance
     vec4 pixel; //xy = pixel coords
-    vec4 dir_pow; //xyz = ray dir, w = power
-    vec4 col_mask; //rgb = color mask
+    vec4 dir; //xyz = ray dir
+    vec4 power; //rgb = power
 };
 
 //Raw ray for sending through buffers. Vec4's are used instead of vec3's, because of alignment issues
 //TODO: Better packing
 struct RawRay {
     vec4 pos; //xyz = position
-    vec4 dir; //xyz = ray dir, w = power
+    vec4 dir; //xyz = ray dir
     vec4 pixel; //xy = pixel coords
-    vec4 col_mask; //rgb = color mask
+    vec4 power; //rgb = power
 };
 
 struct Ray {
     vec3 pos;
     vec3 dir;
     vec2 pixel; //The pixel this ray is affecting
-    float power;
-    vec3 col_mask;
+    vec3 power;
 };
 
 struct RayHit {
@@ -34,8 +33,7 @@ struct RayHit {
     vec3 normal; //Surface normal
     float dist;
     vec2 pixel; //The pixel this ray is affecting
-    float power;
-    vec3 col_mask;
+    vec3 power;
 };
 
 //Stores the information regarding the closest object

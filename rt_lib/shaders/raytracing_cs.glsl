@@ -60,15 +60,15 @@ void main() {
     ray.pos = rray.pos.xyz;
     ray.dir = rray.dir.xyz;
     ray.pixel = rray.pixel.xy;
-    ray.power = rray.dir.w;
+    ray.power = rray.power.rgb;
 
     RayHit hit = trace(ray);
     RawRayHit rhit;
     rhit.pos_id = vec4(hit.pos, float(hit.objectID));
     rhit.normal_dist = vec4(hit.normal, hit.dist);
     rhit.pixel = vec4(hit.pixel, 0.0, 0.0);
-    rhit.dir_pow = vec4(ray.dir, hit.power);
-    rhit.col_mask = rray.col_mask;
+    rhit.dir = vec4(ray.dir, 0.0);
+    rhit.power = rray.power;
 
     ray_hit[ray_index] = rhit;
 }

@@ -21,15 +21,8 @@ layout(std430, binding = 2) buffer ray_buffer {
 uniform vec2 dims;
 uniform float samples;
 
-float fast(vec2 v) {
-    v = (1./4320.) * v + vec2(0.25,0.);
-    float state = fract( dot( v * v, vec2(3571)));
-    return fract( state * state * (3571. * 2.));
-}
-
 float hash1(inout float seed) {
     return fract(sin(seed += 0.1)*43758.5453123);
-    // return fast(vec2(seed, seed++));
 }
 
 vec2 hash2(inout float seed) {
@@ -55,6 +48,8 @@ vec3 sampleHemisphere(const vec3 n, inout float seed ) {
     return normalize( rr );
 }
 
+#include "brdf/generated.glsl"
+
 void main() {
     uint ray_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * uint(dims.x);
     uint random_index = (ray_index + uint(samples)) % uint(dims.x * dims.y);
@@ -70,22 +65,30 @@ void main() {
         // uint seed = uint(samples);
         vec3 newDir = sampleHemisphere(normal, random_ssbo[random_index]);
 
-        float n_dot_l = dot(newDir, rhit.normal_dist.xyz);
-        rhit.dir_pow.w = rhit.dir_pow.w * n_dot_l;
+        //Basic lambert
+        // float n_dot_l = dot(newDir, rhit.normal_dist.xyz);
+        // rhit.dir_pow.w = rhit.dir_pow.w * n_dot_l;
 
-        vec3 albedo = vec3(1.0);
+        //TODO: Read from material
+        Material mat;
+        mat.albedo = vec3(1.0);
         if (objectID == 2) {
-            albedo = vec3(1.0, 0.0, 0.0);
+            mat.albedo = vec3(1.0, 0.0, 0.0);
         } else if (objectID == 4) {
-            albedo = vec3(0.0, 1.0, 0.0);
+            mat.albedo = vec3(0.0, 1.0, 0.0);
         }
-        rhit.col_mask.rgb *= albedo;
+
+        vec3 viewDir = vec3(0.0); //TODO: Implement this
+        //TODO: Swap out for other materials
+        //Contains the power over each colour channel
+        vec3 brdf = material(128519978, mat, newDir, viewDir, rhit.normal_dist.xyz, vec3(0.0), vec3(0.0));
+        rhit.power.rgb *= brdf;
 
         RawRay ray;
         ray.pos = vec4(position + normal * 0.05, 0.0);
-        ray.dir = vec4(newDir, rhit.dir_pow.w);
+        ray.dir = vec4(newDir, 0.0);
         ray.pixel = rhit.pixel;
-        ray.col_mask = rhit.col_mask;
+        ray.power = rhit.power;
         ray_ssbo[ray_index] = ray;
     } else {
         RawRay ray;
