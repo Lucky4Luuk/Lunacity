@@ -50,7 +50,7 @@ pub struct Raytracer {
 
     dispatch_size: (u32, u32),
     bounces: u32,
-    samples: Mutex<u32>,
+    samples: u32,
 }
 
 impl Raytracer {
@@ -106,7 +106,7 @@ impl Raytracer {
 
             dispatch_size: dispatch_size, //TODO: Connect this + workgroup size in shader together
             bounces: 4,
-            samples: Mutex::new(0),
+            samples: 0,
         }
     }
 
@@ -202,7 +202,7 @@ vec3 material(int id, Material mat, vec3 light, vec3 view, vec3 normal, vec3 tan
         }
     }
 
-    pub fn render_sample(&self, camera: &Camera) {
+    pub fn render_sample(&mut self, camera: &Camera) {
         use rand::Rng;
 
         // trace!("RNG ssbo updated!");
@@ -214,16 +214,13 @@ vec3 material(int id, Material mat, vec3 light, vec3 view, vec3 normal, vec3 tan
         // trace!("Rays generated and sample texture cleared!");
         // trace!("Time since start: {:?}", Instant::now() - func_start);
 
-        {
-            let samples = *self.samples.lock().unwrap();
-            if samples % 32 == 0 {
-                // let mut rng = rand::thread_rng();
-                // let rng_vec: Vec<f32> = (0..128).map(|_| rng.gen_range(1f32..2048f32)).collect();
-                // self.rng_ssbo.bind();
-                // self.rng_ssbo.data(&rng_vec[..], gl::DYNAMIC_COPY);
-                // self.rng_ssbo.unbind();
-                debug!("Refreshed RNG buffer! Samples: {}", samples);
-            }
+        if self.samples % 32 == 0 {
+            // let mut rng = rand::thread_rng();
+            // let rng_vec: Vec<f32> = (0..128).map(|_| rng.gen_range(1f32..2048f32)).collect();
+            // self.rng_ssbo.bind();
+            // self.rng_ssbo.data(&rng_vec[..], gl::DYNAMIC_COPY);
+            // self.rng_ssbo.unbind();
+            debug!("Refreshed RNG buffer! Samples: {}", self.samples);
         }
 
         for _i in 0..self.bounces {
@@ -244,7 +241,7 @@ vec3 material(int id, Material mat, vec3 light, vec3 view, vec3 normal, vec3 tan
             //Generate new rays from hits
             self.wave_program.bind();
             self.wave_program.uniform("dims", f32_f32::from( (camera.resolution.0 as f32, camera.resolution.1 as f32) ));
-            self.wave_program.uniform("samples", *self.samples.lock().unwrap() as f32);
+            self.wave_program.uniform("samples", self.samples as f32);
             camera.hit_ssbo.bind_buffer_base(0);
             self.rng_ssbo.bind_buffer_base(1);
             camera.ray_ssbo.bind_buffer_base(2);
@@ -268,15 +265,12 @@ vec3 material(int id, Material mat, vec3 light, vec3 view, vec3 normal, vec3 tan
             self.shading_program.unbind();
         }
 
-        let mut samples_lock = self.samples.lock().unwrap();
-        *samples_lock += 1;
-
-        let samples: i32 = (*samples_lock) as i32;
+        self.samples += 1;
 
         // println!("Samples: {}", samples);
 
         self.combine_program.bind();
-        self.combine_program.uniform("samples", samples);
+        self.combine_program.uniform("samples", self.samples as f32);
         camera.bind_sample_texture(0);
         camera.bind_final_texture(1);
         unsafe {

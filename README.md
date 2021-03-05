@@ -2,7 +2,7 @@
 A pathtracer written in Rust/OpenGL/GLSL, meant for offline rendering.
 
 ## Screenshots
-![basic scene](test.png)
+![basic scene](showcase.png)
 
 ## TODO
 - [ ] Workgroup size should be controllable from Rust (replace 32 by WORKGROUP_SIZE and let preprocessor change it)
