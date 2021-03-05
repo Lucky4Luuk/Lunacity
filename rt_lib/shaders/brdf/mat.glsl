@@ -3,6 +3,8 @@
 
 struct Material {
     vec3 albedo;
+    float roughness;
+    float metallic;
 };
 
 #endif

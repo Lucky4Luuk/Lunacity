@@ -3,6 +3,6 @@
 
 // SETTINGS
 #define MAX_STEPS 512
-#define DIST_PRECISION 0.001
+#define DIST_PRECISION 0.01
 
 #endif

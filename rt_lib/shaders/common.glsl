@@ -60,13 +60,14 @@ MapInfo map(vec3 pos) {
 
     //Box
     MapInfo m = MapInfo(sdInfHorizPlane(pos - vec3(0.0, -2.0, 0.0)), 1);
-    m = mapMin(m, MapInfo(sdBox(pos - vec3(-5.0,0.0, 0.0), vec3(0.25, 3.0, 5.0)), 4));
-    m = mapMin(m, MapInfo(sdBox(pos - vec3(5.0, 0.0, 0.0), vec3(0.25, 3.0, 5.0)), 2));
-    m = mapMin(m, MapInfo(sdBox(pos - vec3(0.0, 3.0, 0.0), vec3(5.0, 0.25, 5.0)), 1));
-    m = mapMin(m, MapInfo(sdBox(pos - vec3(0.0, 0.0, 4.0), vec3(5.0, 3.0, 0.25)), 1));
+    m = mapMin(m, MapInfo(sdBox(pos - vec3(-5.0, 0.0, 0.0), vec3(0.25, 3.0, 6.0)), 4));
+    m = mapMin(m, MapInfo(sdBox(pos - vec3( 5.0, 0.0, 0.0), vec3(0.25, 3.0, 6.0)), 2));
+    m = mapMin(m, MapInfo(sdBox(pos - vec3( 0.0, 3.0, 0.0), vec3(5.0, 0.25, 6.0)), 1));
+    m = mapMin(m, MapInfo(sdBox(pos - vec3( 0.0, 0.0, 4.0), vec3(5.0, 3.0, 0.25)), 1));
+    m = mapMin(m, MapInfo(sdBox(pos - vec3( 0.0, 0.0,-6.0), vec3(5.0, 3.0, 0.25)), 1));
 
     //Objects in room
-    m = mapMin(m, MapInfo(sdSphere(pos - vec3(-1.0, -1.0, 1.0), 1.0), 1));
+    m = mapMin(m, MapInfo(sdSphere(pos - vec3(-1.0, -1.0, 1.0), 1.0), 5));
     m = mapMin(m, MapInfo(sdSphere(pos - vec3(1.5, -0.7, 0.75), 0.75), 1));
 
     //Lights

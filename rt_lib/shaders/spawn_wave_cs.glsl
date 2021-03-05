@@ -63,25 +63,28 @@ void main() {
 
         // vec2 rng = vec2(random_ssbo[random_index], random_ssbo[random_index2]);
         // uint seed = uint(samples);
-        vec3 newDir = sampleHemisphere(normal, random_ssbo[random_index]);
-
-        //Basic lambert
-        // float n_dot_l = dot(newDir, rhit.normal_dist.xyz);
-        // rhit.dir_pow.w = rhit.dir_pow.w * n_dot_l;
+        vec3 hemiDir = sampleHemisphere(normal, random_ssbo[random_index]);
+        vec3 reflectDir = reflect(rhit.dir.xyz, -normal);
 
         //TODO: Read from material
         Material mat;
         mat.albedo = vec3(1.0);
+        mat.roughness = 1.0;
         if (objectID == 2) {
             mat.albedo = vec3(1.0, 0.0, 0.0);
         } else if (objectID == 4) {
             mat.albedo = vec3(0.0, 1.0, 0.0);
+        } else if (objectID == 5) {
+            mat.roughness = 0.01;
         }
 
-        vec3 viewDir = vec3(0.0); //TODO: Implement this
+        vec3 newDir = mix(reflectDir, hemiDir, mat.roughness);
+
+        vec3 viewDir = rhit.dir.xyz;
+        vec3 lightDir = newDir;
         //TODO: Swap out for other materials
         //Contains the power over each colour channel
-        vec3 brdf = material(128519978, mat, newDir, viewDir, rhit.normal_dist.xyz, vec3(0.0), vec3(0.0));
+        vec3 brdf = material(128519978, mat, lightDir, viewDir, rhit.normal_dist.xyz, vec3(0.0), vec3(0.0));
         rhit.power.rgb *= brdf;
 
         RawRay ray;
