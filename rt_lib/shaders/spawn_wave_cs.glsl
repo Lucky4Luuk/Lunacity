@@ -22,14 +22,17 @@ uniform vec2 dims;
 uniform float samples;
 
 float hash1(inout float seed) {
+    seed = mod( seed*1.1234567893490423, 13. );
     return fract(sin(seed += 0.1)*43758.5453123);
 }
 
 vec2 hash2(inout float seed) {
+    seed = mod( seed*1.1234567893490423, 13. );
     return fract(sin(vec2(seed+=0.1,seed+=0.1))*vec2(43758.5453123,22578.1459123));
 }
 
 vec3 hash3(inout float seed) {
+    seed = mod( seed*1.1234567893490423, 13. );
     return fract(sin(vec3(seed+=0.1,seed+=0.1,seed+=0.1))*vec3(43758.5453123,22578.1459123,19642.3490423));
 }
 
