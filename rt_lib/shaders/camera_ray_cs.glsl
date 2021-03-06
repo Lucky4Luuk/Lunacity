@@ -10,6 +10,7 @@ layout(std430, binding = 0) buffer ray_buffer {
 
 uniform vec2 dims;
 uniform mat4 invprojview;
+uniform vec2 jitter;
 
 Ray rayFromProjview(vec2 uv) {
     vec2 pos = uv * 2.0 - 1.0;
@@ -27,7 +28,7 @@ void main() {
     uint ray_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * uint(dims.x);
 
     vec2 pixel_coords = vec2(gl_GlobalInvocationID.xy);
-    vec2 uv = pixel_coords / dims;
+    vec2 uv = pixel_coords / dims + jitter * 0.001;
 
     Ray ray = rayFromProjview(uv);
     RawRay rray;

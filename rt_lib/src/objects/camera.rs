@@ -63,6 +63,7 @@ pub struct Camera {
 
     pub ray_ssbo: ShaderStorageBuffer,
     pub hit_ssbo: ShaderStorageBuffer,
+    pub jitter: f32_f32,
 
     pub ray_program: ShaderProgram,
 }
@@ -87,7 +88,7 @@ impl Camera {
         let ray_program = ShaderProgram::from_shader(&ray_cs);
         trace!("Combine shader loaded!");
 
-        let camera = Self {
+        let mut camera = Self {
             eye: vec3(0.0,0.0,-5.0),
             look_at: vec3(0.0,0.0,0.0),
 
@@ -99,6 +100,7 @@ impl Camera {
 
             ray_ssbo: ray_ssbo,
             hit_ssbo: hit_ssbo,
+            jitter: (0.0, 0.0).into(),
 
             ray_program: ray_program,
         };
@@ -147,7 +149,9 @@ impl Camera {
     }
 
     //TODO: Move ray generation to a shader
-    pub fn generate_rays(&self, dispatch_size: (u32, u32)) {
+    pub fn generate_rays(&mut self, dispatch_size: (u32, u32)) {
+        use rand::Rng;
+
         let inv_proj_view = (self.get_projection_matrix(self.resolution.0 as f32 / self.resolution.1 as f32) * self.get_view_matrix()).inverse();
 
         let data = vec![Ray::default(); self.resolution.0 * self.resolution.1];
@@ -156,17 +160,18 @@ impl Camera {
         self.ray_ssbo.data(&data[..], gl::DYNAMIC_COPY);
         self.ray_ssbo.unbind();
 
-        // trace!("Empty buffer constructed!");
+        let mut rng = rand::thread_rng();
+        self.jitter.d0 = rng.gen::<f32>();
+        self.jitter.d1 = rng.gen::<f32>();
 
         self.ray_program.bind();
         self.ray_ssbo.bind_buffer_base(0);
         self.ray_program.uniform("dims", f32_f32::from( (self.resolution.0 as f32, self.resolution.1 as f32) ));
         self.ray_program.uniform("invprojview", inv_proj_view);
+        self.ray_program.uniform("jitter", self.jitter);
         unsafe {
             gl::DispatchCompute(self.resolution.0 as u32 / dispatch_size.0, self.resolution.1 as u32 / dispatch_size.1, 1);
         }
         self.ray_program.unbind();
-
-        // trace!("Rays generated!");
     }
 }

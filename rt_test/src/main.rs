@@ -48,7 +48,7 @@ fn main() {
     let mut raytracer = Raytracer::new(dispatch_size);
     let lambert = Lambert;
     raytracer.add_brdf(&lambert);
-    let camera = Camera::new((1280, 720), dispatch_size);
+    let mut camera = Camera::new((1280, 720), dispatch_size);
 
     let vertices: Vec<Vertex> = vec![
             Vertex {
@@ -85,8 +85,7 @@ fn main() {
         ];
     let quad = Mesh::from_vertices(&vertices);
 
-    raytracer.render_sample(&camera);
-    // raytracer.render_sample(&camera);
+    raytracer.render_sample(&mut camera);
 
     let mut last_frame = Instant::now();
     let mut total_time: f32 = 0.0;
@@ -110,7 +109,7 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
-        raytracer.render_sample(&camera);
+        raytracer.render_sample(&mut camera);
         raytracer.test_output(&camera, &quad);
 
         let now = Instant::now();

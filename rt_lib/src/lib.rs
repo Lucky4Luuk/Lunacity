@@ -202,7 +202,7 @@ vec3 material(int id, Material mat, vec3 light, vec3 view, vec3 normal, vec3 tan
         }
     }
 
-    pub fn render_sample(&mut self, camera: &Camera) {
+    pub fn render_sample(&mut self, camera: &mut Camera) {
         use rand::Rng;
 
         // trace!("RNG ssbo updated!");

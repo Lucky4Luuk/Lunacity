@@ -1,5 +1,6 @@
 #define PI 3.14159265359
 #define TAU 2*PI
+#define GOLDEN_RATIO 1.61803398875
 
 //Raw rayhit for sending through buffers. Vec4's are used instead of vec3's, because of alignment issues
 //TODO: Better packing
